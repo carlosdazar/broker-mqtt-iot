@@ -9,8 +9,7 @@ Control de variables críticas (temperatura y humedad) en las etapas de secado y
 * Andres Coral
 
 ## Tabla de contenido
-- [broker-mqtt-iot](#broker-mqtt-iot)
-  - [Integrantes](#integrantes)
+
   - [Arquitectura](#arquitectura)
 - [Reglas de Seguridad en AWS (Security Groups)](#reglas-de-seguridad-en-aws-security-groups)
 - [1. Configuración de Mosquitto](#1-configuración-de-mosquitto)
