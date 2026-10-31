@@ -445,5 +445,6 @@ La implementación de este dashboard permite centralizar la información obtenid
 * Analizar el comportamiento histórico de las variables ambientales.
 * Consultar registros recientes mediante una tabla consolidada.
 * Facilitar la identificación de posibles variaciones en las condiciones de operación.
+
 Este dashboard constituye una herramienta de visualización y monitoreo para un sistema IoT, integrando información almacenada en InfluxDB. Mediante siete paneles de visualización, es posible consultar indicadores actuales, analizar el comportamiento histórico de las variables ambientales e identificar información relacionada con los lotes y procesos registrados. La integración de MQTT, InfluxDB y Grafana permite establecer una arquitectura de adquisición, almacenamiento y visualización de datos que facilita la supervisión del sistema y proporciona información útil para el seguimiento de las condiciones de operación.
 
