@@ -355,4 +355,95 @@ se hace  clic en Save & Test. Debe aparecer el mensaje de confirmación:
 ```bash
 Data source is working, 1 database found.
 ```
+## Visualización de datos en Grafana
+
+Este proyecto implementa un dashboard de monitoreo en tiempo real utilizando Grafana e InfluxDB (persistencia de los datos), con el objetivo de visualizar y supervisar las variables críticas (temperatura y humedad) en las etapas de secado y almacenamiento de bioproductos de hoja de coca. El dashboard permite realizar el seguimiento de las siguientes variables:
+* Temperatura: permite visualizar el comportamiento térmico registrado por el sensor.
+* Humedad relativa: permite monitorear los niveles de humedad del ambiente.
+* Lote: identifica el lote asociado al proceso de monitoreo.
+* Proceso: permite identificar la etapa o actividad del proceso que se está ejecutando.
+* Consolidado: presenta un registro tabular con los datos almacenados en InfluxDB.
+La información se obtiene de la base de datos InfluxDB, específicamente de la medición denominada ` mqtt_consumer`. Grafana consulta periódicamente los datos almacenados y los presenta mediante diferentes tipos de paneles, facilitando la interpretación y el seguimiento de las variables del sistema.
+
+### Estructura del dashboard
+
+El dashboard está compuesto por siete paneles, cada uno diseñado para representar información específica del sistema IoT.
+
+### Panel 1: Temperatura
+
+El tipo de visualización es Series de Tiempo, donde este panel permite visualizar el comportamiento histórico de la temperatura registrada por el sensor. La información se obtiene mediante una consulta a InfluxDB que recupera el último valor de temperatura de cada intervalo de tiempo.
+```bash
+SELECT last("temperatura")
+FROM "mqtt_consumer"
+WHERE $timeFilter
+```
+
+### Panel 2: Temperatura Actual
+
+El tipo de visualización es Tarjeta estadística, donde presenta un indicador numérico con el último valor disponible de temperatura, permitiendo conocer rápidamente la condición térmica actual del sistema. Este panel proporciona una lectura resumida de la temperatura, complementando la información histórica del primer panel.
+
+### Panel 3: Identificación del Lote
+
+El tipo de visualización es Tarjeta estadística, donde muestra el último identificador de lote registrado en InfluxDB.
+```bash
+SELECT last("lote")
+FROM "mqtt_consumer"
+WHERE $timeFilter
+```
+El panel permite identificar el lote asociado a los registros recibidos durante el intervalo de tiempo seleccionado.
+
+### Panel 4: Humedad Relativa
+
+El tipo de visualización es Tarjeta estadística, donde presenta el valor de humedad relativa calculado mediante la función de promedio. La información procede del campo humedad almacenado en la medición ` mqtt_consumer`. Este panel permite consultar un indicador resumido de las condiciones de humedad del ambiente.
+
+### Panel 5: Humedad
+
+El tipo de visualización es Series de Tiempo, donde representa gráficamente el comportamiento histórico de la humedad registrada por el sensor.
+```bash
+SELECT last("humedad")
+FROM "mqtt_consumer"
+WHERE $timeFilter
+GROUP BY time($__interval) fill(null)
+```
+Este panel permite observar las fluctuaciones de humedad durante el periodo de monitoreo.
+
+### Panel 6: Proceso Actual
+
+El tipo de visualización es Tarjeta estadística, donde muestra el último proceso registrado en la base de datos.
+```bash
+SELECT "proceso" AS " "
+FROM "mqtt_consumer"
+WHERE $timeFilter
+ORDER BY time DESC
+LIMIT 1
+```
+El resultado permite identificar la actividad o etapa del proceso que se está ejecutando.
+
+### Panel 7: Consolidado
+
+El tipo de visualización es una Tabla, donde se muestra la consolidación de los registros almacenados en InfluxDB.
+```bash
+SELECT "lote", "proceso", "temperatura", "humedad"
+FROM "mqtt_consumer"
+WHERE $timeFilter
+ORDER BY time DESC
+LIMIT 50
+```
+La tabla contiene las siguientes columnas:
+* Lote: identificador del lote monitoreado.
+* Proceso: etapa o actividad del proceso.
+* Temperatura: valor de temperatura registrado.
+* Humedad: valor de humedad registrado.
+Este panel permite consultar de manera conjunta las variables ambientales y la información operativa del sistema.
+
+### Utilidad del dashboard
+
+La implementación de este dashboard permite centralizar la información obtenida mediante sensores IoT en una interfaz gráfica de monitoreo. Entre sus principales beneficios se encuentran:
+* Supervisar las condiciones ambientales mediante indicadores de temperatura y humedad.
+* Identificar el lote asociado a las mediciones.
+* Consultar el proceso registrado en el sistema.
+* Analizar el comportamiento histórico de las variables ambientales.
+* Consultar registros recientes mediante una tabla consolidada.
+* Facilitar la identificación de posibles variaciones en las condiciones de operación.
+Este dashboard constituye una herramienta de visualización y monitoreo para un sistema IoT, integrando información almacenada en InfluxDB. Mediante siete paneles de visualización, es posible consultar indicadores actuales, analizar el comportamiento histórico de las variables ambientales e identificar información relacionada con los lotes y procesos registrados. La integración de MQTT, InfluxDB y Grafana permite establecer una arquitectura de adquisición, almacenamiento y visualización de datos que facilita la supervisión del sistema y proporciona información útil para el seguimiento de las condiciones de operación.
 
