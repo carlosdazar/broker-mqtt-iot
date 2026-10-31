@@ -548,4 +548,8 @@ SELECT last("temperatura") FROM "mqtt_consumer" WHERE $timeFilter
 ```
 * Save and exit.
 
+### Ejemplo de alerta
+
+![Telegram.png](docs/Telegram.png)
+
 
