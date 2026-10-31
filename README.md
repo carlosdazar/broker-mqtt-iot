@@ -8,6 +8,9 @@ Control de variables críticas (temperatura y humedad) en las etapas de secado y
 * Carlos Daza
 * Andres Coral
 
+### Arquitectura
+![arquitectura](docs/arquitectura.png)
+
 ## Reglas de Seguridad en AWS (Security Groups)
 
 | Instancia | Puerto | Protocolo | Origen / Source | Propósito |
@@ -67,8 +70,6 @@ log_dest file /var/log/mosquitto/mosquitto.log
 include_dir /etc/mosquitto/conf.d
 
 ```
-### Arquitectura
-![arquitectura](docs/arquitectura.png)
 
 ### Control del Servicio
 
