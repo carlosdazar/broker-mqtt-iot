@@ -9,6 +9,7 @@ Control de variables críticas (temperatura y humedad) en las etapas de secado y
 * Andres Coral
 
 ## Estructura del Repositorio
+
 broker-mqtt-iot/
 ├── docs/                      # Capturas de pantalla, diagramas y recursos visuales para el README
 │   ├── arquitectura.png
