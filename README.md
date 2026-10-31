@@ -10,7 +10,8 @@ Control de variables críticas (temperatura y humedad) en las etapas de secado y
 
 ## Estructura del Repositorio
 
-broker-mqtt-iot/
+```
+├──broker-mqtt-iot/
 ├── docs/                      # Capturas de pantalla, diagramas y recursos visuales para el README
 │   ├── arquitectura.png
 │   ├── Grafana_Dashboard.png
@@ -32,7 +33,7 @@ broker-mqtt-iot/
 │   └── telegraf.conf          # Reglas de suscripción MQTT e ingesta directa hacia InfluxDB
 ├── .gitignore                 # Archivo para excluir temporales y credenciales sensibles del control de versiones
 └── README.md                  # Documentación global del proyecto
-
+```
   
 
 ## Tabla de contenido
