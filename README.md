@@ -72,7 +72,7 @@ Mosquitto es un intermediario de mensajes (message broker) de código abierto, l
 
 ### Requisitos Previos
 
-Asegurarse de tener habilitado el puerto correspondiente en las reglas del Security Group de AWS y en el firewall del servidor en red publica. Para este caso se habilita el puerto `1883`.
+Asegurarse de tener habilitado el puerto correspondiente en las reglas del Security Group de AWS y en el firewall del servidor en red pública. Para este caso se habilita el puerto `1883`.
 
 ### Instalación
 
@@ -203,7 +203,7 @@ const char* mqtt_client_id = "ESP32_Client"; // Debe ser único por dispositivo
   "fecha_hora": "2026-10-30 21:45:00"
 }
 ```
-publica el tópico `esp32/values`.
+pública el tópico `esp32/values`.
 
 ## 3. Prueba de conectividad MQTT con ESP32
 
@@ -253,7 +253,7 @@ Para que la telemetría enviada por la ESP32 a través de MQTT pueda ser almacen
 
 Se debe realizar la conexión a la segunda instancia que esta en una red privada por medio de la primera instancia, esta permite recibir las conexiones SSH autorizadas desde el exterior (red pública) y reenviarlas de forma segura hacia la interfaz de red privada  de la segunda instancia, evitando exponer esta última directamente a Internet.
 
-Asegurarse de tener habilitado el puerto correspondiente en las reglas del Security Group de AWS y en el firewall del servidor en red publica. Para este caso se habilita el puerto `8086` permitido únicamente desde la IP Privada de la Instancia 1.
+Asegurarse de tener habilitado el puerto correspondiente en las reglas del Security Group de AWS y en el firewall del servidor en red pública. Para este caso se habilita el puerto `8086` permitido únicamente desde la IP Privada de la Instancia 1.
 
 ```bash
 # Actualizar repositorios e instalar dependencias básicas
@@ -386,11 +386,11 @@ Se debe observar algo como:
 
 ## 7. Grafana
 
-Grafana es una plataforma de código abierto para el análisis, la visualización y la monitorización de datos. Dentro de la arquitectura distribuida, Grafana se ejecuta en la Instancia 1 (Pública) y consulta de forma segura la base de datos InfluxDB situada en la Instancia 2 (Privada) para presentar la telemetría del ESP32 en tiempo real, se debe instalar en la primera instancia publica.
+Grafana es una plataforma de código abierto para el análisis, la visualización y la monitorización de datos. Dentro de la arquitectura distribuida, Grafana se ejecuta en la Instancia 1 (Pública) y consulta de forma segura la base de datos InfluxDB situada en la Instancia 2 (Privada) para presentar la telemetría del ESP32 en tiempo real, se debe instalar en la primera instancia pública.
 
 ### Requisitos Previos
 
-Asegurarse de tener habilitado el puerto correspondiente en las reglas del Security Group de AWS y en el firewall del servidor en red publica. Para este caso se habilita el puerto `3000`.
+Asegurarse de tener habilitado el puerto correspondiente en las reglas del Security Group de AWS y en el firewall del servidor en red pública. Para este caso se habilita el puerto `3000`.
 
 ```bash
 # Instalar dependencias necesarias
@@ -559,7 +559,7 @@ El Chat ID es el identificador único del chat individual o del grupo donde el b
 
 ### Grupo en Telegram
 
-* Crear un grupo en Telegram y agrega a los operadores-integrantes.
+* Crear un grupo en Telegram y agregar a los operadores-integrantes.
 * Agregar al bot recién creado al grupo como un miembro más.
 * Envíar un mensaje cualquiera dentro del grupo (ejemplo: Prueba de alerta).
 * Abrir la URL en el navegador:
