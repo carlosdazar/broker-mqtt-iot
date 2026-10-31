@@ -203,7 +203,7 @@ CREATE DATABASE nombre_base_datos
 -- Confirmar que la base de datos fue creada
 SHOW DATABASES
 ```
-## 4.Configuración de telegraf
+## 5.Configuración de telegraf
 
 Telegraf es un agente de software ligero y de código abierto (desarrollado por InfluxData) diseñado para la recolección, procesamiento y envío de datos y métricas,actúa como el "puente" o intermediario entre las fuentes que generan la información (sensores, brokers, servidores) y las bases de datos donde se almacena.
 
@@ -233,4 +233,51 @@ apt-get update && apt-get install -y telegraf
 se debe editar el archivo de configuración de telegraf `/etc/telegraf/telegraf.conf` para la entrada de datos por Mosquitto y  la salida hacia influxd
 
 ```bash
+[[inputs.mqtt_consumer]]
+         servers = ["Ip_privada_instancia_publica:1883"]
+         topics =[ "esp32/values"]
+         username = "esp32_user"
+         password = "****"
+         data_format ="json"
+         json_string_fields = ["fecha_hora","id_sensor ", "temperatura","humedad","lote","proceso"]
+         data_type ="float"
+         json_timezone = "America/Bogota"
+[[outputs.influxdb]]
+        urls = ["Ip_privada_instancia_privada:8086"]
+        database = "nombre_base_de_datos_creada_en_influxdb"
 ```
+### Control del Servicio
+
+Reiniciar y habilitar telegraf para que se ejecute automáticamente cada vez que la instancia EC2 se reinicie:
+
+```bash
+# Reiniciar el servicio
+systemctl restart telegraf
+
+# Iniciar el servicio
+sudo systemctl start telegraf
+
+# Habilitar el inicio automático
+sudo systemctl enable telegraf
+
+# Verificar que el servicio está activo (running)
+sudo systemctl status telegraf
+```
+## 6. Verificación Base de datos Influxdb
+
+Para verificar que si se guardo los datos enviados del ESP32 desde Mosquitto por medio de telegraf hacia Influxb se realiza el siguiente porceso
+
+```bash
+influx
+-- ver dbs creados
+show databases
+-- usar db
+use nombre_del_database
+--realizar consulta
+SELECT * FROM mqtt_consumer
+```
+Se debe observar algo como:
+
+![Influx_Datos](docs/Influx_Datos.png)
+
+
