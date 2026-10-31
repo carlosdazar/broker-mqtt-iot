@@ -8,6 +8,32 @@ Control de variables críticas (temperatura y humedad) en las etapas de secado y
 * Carlos Daza
 * Andres Coral
 
+## Estructura del Repositorio
+broker-mqtt-iot/
+├── docs/                      # Capturas de pantalla, diagramas y recursos visuales para el README
+│   ├── arquitectura.png
+│   ├── Grafana_Dashboard.png
+│   ├── Grafana_Datasources_1.png
+│   ├── Grafana_Datasources_2.png
+│   ├── Grafana_ConfiguracionAlerta.png
+│   ├── Influx_Datos.png
+│   ├── MQTT_Explorer_Conexion.png
+│   ├── MQTT_Explorer_EnviarDatos.png
+│   └── Telegram.png
+├── firmware/                  # Código fuente C++ / Arduino para la ESP32
+│   ├── config.h               # Configuración de WiFi, Broker MQTT, credenciales y variables de trazabilidad
+│   └── firmware.ino           # Lógica principal del sensor DHT11 y publicación de mensajes JSON
+├── grafana/                   # Archivos de exportación e integración para Grafana
+│   └── dashboard.json         # Dashboard oficial exportado para importación rápida
+├── mosquitto/                 # Archivos de configuración del servidor MQTT
+│   └── mosquitto.conf         # Configuración de puerto (1883), listener e integración de credenciales
+├── telegraf/                  # Archivos de configuración del agente ETL
+│   └── telegraf.conf          # Reglas de suscripción MQTT e ingesta directa hacia InfluxDB
+├── .gitignore                 # Archivo para excluir temporales y credenciales sensibles del control de versiones
+└── README.md                  # Documentación global del proyecto
+
+  
+
 ## Tabla de contenido
 
 - [Arquitectura](#arquitectura)
