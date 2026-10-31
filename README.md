@@ -10,7 +10,7 @@ Control de variables críticas (temperatura y humedad) en las etapas de secado y
 
 ## Tabla de contenido
 
-  - [Arquitectura](#arquitectura)
+- [Arquitectura](#arquitectura)
 - [Reglas de Seguridad en AWS (Security Groups)](#reglas-de-seguridad-en-aws-security-groups)
 - [1. Configuración de Mosquitto](#1-configuración-de-mosquitto)
   - [Requisitos Previos](#requisitos-previos)
@@ -22,7 +22,7 @@ Control de variables críticas (temperatura y humedad) en las etapas de secado y
 - [2. Configuración de ESP32](#2-configuración-de-esp32)
   - [Archivo de Configuración (`config.h`)](#archivo-de-configuración-configh)
   - [Lógica del Firmware y Publicación](#lógica-del-firmware-y-publicación)
-- [3. Prueba de conectividad MQTT - ESP32](#3-prueba-de-conectividad-mqtt--esp32)
+- [3. Prueba de conectividad MQTT con ESP32](#3-prueba-de-conectividad-mqtt-con-esp32)
   - [Guardar CSV](#guardar-csv)
 - [4. Configuración de InfluxDB](#4-configuración-de-influxdb)
   - [Requisitos Previos](#requisitos-previos-1)
@@ -37,7 +37,7 @@ Control de variables críticas (temperatura y humedad) en las etapas de secado y
   - [Control del Servicio](#control-del-servicio-3)
   - [Acceder a Grafana](#acceder-a-grafana)
   - [Configuración Grafana](#configuración-grafana)
-- [Visualización de datos en Grafana](#visualización-de-datos-en-grafana)
+- [8. Visualización de datos en Grafana](#8-visualización-de-datos-en-grafana)
   - [Estructura del dashboard](#estructura-del-dashboard)
     - [Panel 1: Temperatura](#panel-1-temperatura)
     - [Panel 2: Temperatura Actual](#panel-2-temperatura-actual)
@@ -47,8 +47,13 @@ Control de variables críticas (temperatura y humedad) en las etapas de secado y
     - [Panel 6: Proceso Actual](#panel-6-proceso-actual)
     - [Panel 7: Consolidado](#panel-7-consolidado)
   - [Utilidad del dashboard](#utilidad-del-dashboard)
+- [9. Configuración de alertas](#9-configuración-de-alertas)
+  - [Grupo en Telegram](#grupo-en-telegram)
+  - [Configuración del Contact Point](#configuración-del-contact-point)
+  - [Alertas](#alertas)
+  - [Ejemplo de alerta](#ejemplo-de-alerta)
 
-### Arquitectura
+## Arquitectura
 ![arquitectura](docs/arquitectura.png)
 
 ## Reglas de Seguridad en AWS (Security Groups)
@@ -61,7 +66,7 @@ Control de variables críticas (temperatura y humedad) en las etapas de secado y
 | **Instancia 2 (Privada)** | `22` | TCP | `IP_PRIVADA_INSTANCIA_1` | Acceso SSH mediante Bastion Host / Jump Server |
 | | `8086` | TCP | `IP_PRIVADA_INSTANCIA_1` | Escritura (Telegraf) y Consulta (Grafana) |
 
-## 1. Configuración de Mosquitto 
+## 1. Configuración de Mosquitto
 
 Mosquitto es un intermediario de mensajes (message broker) de código abierto, ligero y de alto rendimiento que implementa el protocolo MQTT (Message Queuing Telemetry Transport).
 
@@ -87,7 +92,7 @@ sudo mosquitto_passwd -c /etc/mosquitto/passwd USUARIO
 ```
 Se crea un usuario `esp32_user` con contraseña.
 
-### Archivo de Configuración 
+### Archivo de Configuración
 
 se debe editar el archivo principal de configuración de Mosquitto  para habilitar la interfaz de red y la autenticación por contraseña:
 
@@ -123,7 +128,7 @@ sudo systemctl restart mosquitto
 # Comprobar estado del servicio
 sudo systemctl status mosquitto
 ```
-### Verificación con Mqtt Explorer
+### Verificación con MQTT Explorer
 
 Se debe descargar MQTT Explorer, al abrir la aplicación se debe configurar la conexión de la siguiente manera:
 
@@ -149,28 +154,34 @@ Conexiones:
 
 El proyecto utiliza un archivo de cabecera centralizado (`config.h`) para gestionar las credenciales de red, dirección IP del servidor MQTT, parámetros de trazabilidad y configuración del hardware:
 
-```bash
-// --- Configuración de Red WiFi ---
+```cpp
+#ifndef CONFIG_H
+#define CONFIG_H
+
+// --- Configuración de Red WiFi (solo 2.4 GHz) ---
 #define WIFI_SSID     "NOMBRE RED WIFI 2.4"
 #define WIFI_PASSWORD "CLAVE"
 
 // --- Configuración del Broker MQTT ---
-const char* mqtt_server = "18.209.235.164"; // Dirección IP de la instancia EC2
+const char* mqtt_server = "IP_PUBLICA_INSTANCIA_1"; // IP pública de la Instancia 1 (EC2)
 const int mqtt_port     = 1883;             // Puerto estándar de Mosquitto
-const char* mqtt_user   = "esp32_user";     // Usuario autenticado
+const char* mqtt_user   = "esp32_user";     // Usuario creado con mosquitto_passwd
 const char* mqtt_pass   = "****";           // Contraseña del usuario
+const char* mqtt_client_id = "ESP32_Client"; // Debe ser único por dispositivo
 
 // --- Metadatos de Trazabilidad y Proceso ---
 #define SENSOR_ID     "ESP32"
 #define LOTE          "LOTE-2026-01"
 #define PROCESO       "SECADO_PASTOS"
 
-// --- Configuración del Hardware ---
-#define DHTPIN        19         // Pin GPIO19 conectado a la línea Data del sensor
+// --- Configuración del Hardware / Sensores ---
+#define DHTPIN        19         // GPIO19 conectado a la línea Data del sensor
 #define DHTTYPE       DHT11      // Modelo del sensor de temperatura/humedad
 
 #endif
 ```
+
+> Si se conectan varias ESP32 al mismo broker, cada una debe tener un `mqtt_client_id` distinto; de lo contrario el broker desconecta a la sesión anterior.
 ### Lógica del Firmware y Publicación
 
 * Se inicia el sensor DHT11
@@ -194,7 +205,7 @@ const char* mqtt_pass   = "****";           // Contraseña del usuario
 ```
 publica el tópico `esp32/values`.
 
-## 3. Prueba de conectividad MQTT -ESP32
+## 3. Prueba de conectividad MQTT con ESP32
 
 Para verificar que el broker Mosquitto  en el servidor EC2 está recibiendo correctamente las métricas enviadas por el ESP32,se puede suscribir en tiempo real al tópico mediante la herramienta CLI de Mosquitto.
 
@@ -204,13 +215,37 @@ mosquitto_sub -h localhost -p 1883 -u "esp32_user" -P "****" -t "esp32/values" -
 
 ### Guardar CSV
 
-se puede guardar el csv de la siguiente manera:
+`mosquitto_sub` entrega cada mensaje en formato JSON, por lo que se usa `jq` para convertir cada mensaje en una fila CSV.
+
+Instalar `jq`:
 
 ```bash
-mosquitto_sub -h localhost -p 1883 -u "esp32_user" -P "****" -t "esp32/values" >nombre_base_de_datos.csv
+sudo apt install -y jq
 ```
 
-## 4.Configuración de InfluxDB
+Crear el archivo con el encabezado y guardar los mensajes en tiempo real:
+
+```bash
+# Encabezado del CSV (solo la primera vez)
+echo "fecha_hora,id_sensor,lote,proceso,temperatura,humedad" > datos_esp32.csv
+
+# Convertir cada mensaje JSON en una fila y agregarla al archivo
+mosquitto_sub -h localhost -p 1883 -u "esp32_user" -P "****" -t "esp32/values" \
+| jq -r --unbuffered '[.fecha_hora, .id_sensor, .lote, .proceso, .temperatura, .humedad] | @csv' \
+>> datos_esp32.csv
+```
+
+El archivo resultante tiene la siguiente forma:
+
+```csv
+fecha_hora,id_sensor,lote,proceso,temperatura,humedad
+"2026-10-30 21:45:00","ESP32","LOTE-2026-01","SECADO_PASTOS",22.4,65
+"2026-10-30 21:45:15","ESP32","LOTE-2026-01","SECADO_PASTOS",22.5,64
+```
+
+Se detiene la captura con `Ctrl + C`. Para que siga guardando después de cerrar la sesión SSH, se puede ejecutar dentro de `tmux` o `screen`.
+
+## 4. Configuración de InfluxDB
 
 Para que la telemetría enviada por la ESP32 a través de MQTT pueda ser almacenada y consultada en tiempo real por Grafana, se utiliza InfluxDB como motor de base de datos especializado en series temporales. Se debe hacer la instalación en la red privada ya que se enfoca hacia la seguridad, la eficiencia y las buenas prácticas de arquitectura. 
 
@@ -257,7 +292,7 @@ CREATE DATABASE nombre_base_datos
 -- Confirmar que la base de datos fue creada
 SHOW DATABASES
 ```
-## 5.Configuración de telegraf
+## 5. Configuración de Telegraf
 
 Telegraf es un agente de software ligero y de código abierto (desarrollado por InfluxData) diseñado para la recolección, procesamiento y envío de datos y métricas,actúa como el "puente" o intermediario entre las fuentes que generan la información (sensores, brokers, servidores) y las bases de datos donde se almacena.
 
@@ -282,34 +317,49 @@ se instala el paquete de la siguiente manera:
 apt-get update && apt-get install -y telegraf
 ```
 
-### Archivo de Configuración 
+### Archivo de Configuración
 
 se debe editar el archivo de configuración de telegraf `/etc/telegraf/telegraf.conf` para la entrada de datos por Mosquitto y  la salida hacia influxdb
 
-```bash
+```toml
+# --- Entrada: suscripción al broker Mosquitto (Instancia 1) ---
 [[inputs.mqtt_consumer]]
-         servers = ["Ip_privada_instancia_publica:1883"]
-         topics =[ "esp32/values"]
-         username = "esp32_user"
-         password = "****"
-         data_format ="json"
-         json_string_fields = ["fecha_hora","id_sensor ", "temperatura","humedad","lote","proceso"]
-         data_type ="float"
-         json_timezone = "America/Bogota"
+  servers = ["tcp://IP_PRIVADA_INSTANCIA_1:1883"]
+  topics = ["esp32/values"]
+  qos = 0
+  client_id = "telegraf_consumer"
+  username = "esp32_user"
+  password = "****"
+
+  data_format = "json"
+  # Los valores numéricos (temperatura, humedad) se guardan como float automáticamente.
+  # Los campos de texto se descartan a menos que se listen aquí.
+  json_string_fields = ["id_sensor", "lote", "proceso", "fecha_hora"]
+
+  # Opcional: usar la hora del ESP32 como timestamp en lugar de la hora de llegada.
+  # Si se habilita, los mensajes con "fecha_hora": "N/A" (NTP sin sincronizar) se descartan.
+  # json_time_key = "fecha_hora"
+  # json_time_format = "2006-01-02 15:04:05"
+  # json_timezone = "America/Bogota"
+
+# --- Salida: InfluxDB 1.x (Instancia 2) ---
 [[outputs.influxdb]]
-        urls = ["Ip_privada_instancia_privada:8086"]
-        database = "nombre_base_de_datos_creada_en_influxdb"
+  urls = ["http://IP_PRIVADA_INSTANCIA_2:8086"]
+  database = "nombre_base_de_datos_creada_en_influxdb"
+  # La base de datos se crea manualmente con CREATE DATABASE
+  skip_database_creation = true
 ```
+
+Notas:
+* `servers` requiere el prefijo `tcp://` y `urls` el prefijo `http://`.
+* Los nombres en `json_string_fields` deben coincidir exactamente con las claves del JSON (sin espacios).
 ### Control del Servicio
 
 Reiniciar y habilitar telegraf para que se ejecute automáticamente cada vez que la instancia EC2 se reinicie:
 
 ```bash
-# Reiniciar el servicio
-systemctl restart telegraf
-
-# Iniciar el servicio
-sudo systemctl start telegraf
+# Reiniciar el servicio para aplicar la configuración
+sudo systemctl restart telegraf
 
 # Habilitar el inicio automático
 sudo systemctl enable telegraf
@@ -317,7 +367,7 @@ sudo systemctl enable telegraf
 # Verificar que el servicio está activo (running)
 sudo systemctl status telegraf
 ```
-## 6. Verificación Base de datos Influxdb
+## 6. Verificación Base de Datos InfluxDB
 
 Para verificar que si se guardo los datos enviados del ESP32 desde Mosquitto por medio de telegraf hacia Influxb se realiza el siguiente porceso
 
@@ -415,7 +465,7 @@ El dashboard está compuesto por siete paneles, cada uno diseñado para represen
 
 ![Grafana_Dashboard.png](docs/Grafana_Dashboard.png)
 
-### Panel 1: Temperatura
+#### Panel 1: Temperatura
 
 El tipo de visualización es Series de Tiempo, donde este panel permite visualizar el comportamiento histórico de la temperatura registrada por el sensor. La información se obtiene mediante una consulta a InfluxDB que recupera el último valor de temperatura de cada intervalo de tiempo.
 ```bash
@@ -424,11 +474,11 @@ FROM "mqtt_consumer"
 WHERE $timeFilter
 ```
 
-### Panel 2: Temperatura Actual
+#### Panel 2: Temperatura Actual
 
 El tipo de visualización es Tarjeta estadística, donde presenta un indicador numérico con el último valor disponible de temperatura, permitiendo conocer rápidamente la condición térmica actual del sistema. Este panel proporciona una lectura resumida de la temperatura, complementando la información histórica del primer panel.
 
-### Panel 3: Identificación del Lote
+#### Panel 3: Identificación del Lote
 
 El tipo de visualización es Tarjeta estadística, donde muestra el último identificador de lote registrado en InfluxDB.
 ```bash
@@ -438,11 +488,11 @@ WHERE $timeFilter
 ```
 El panel permite identificar el lote asociado a los registros recibidos durante el intervalo de tiempo seleccionado.
 
-### Panel 4: Humedad Relativa
+#### Panel 4: Humedad Relativa
 
 El tipo de visualización es Tarjeta estadística, donde presenta el valor de humedad relativa calculado mediante la función de promedio. La información procede del campo humedad almacenado en la medición ` mqtt_consumer`. Este panel permite consultar un indicador resumido de las condiciones de humedad del ambiente.
 
-### Panel 5: Humedad
+#### Panel 5: Humedad
 
 El tipo de visualización es Series de Tiempo, donde representa gráficamente el comportamiento histórico de la humedad registrada por el sensor.
 ```bash
@@ -453,7 +503,7 @@ GROUP BY time($__interval) fill(null)
 ```
 Este panel permite observar las fluctuaciones de humedad durante el periodo de monitoreo.
 
-### Panel 6: Proceso Actual
+#### Panel 6: Proceso Actual
 
 El tipo de visualización es Tarjeta estadística, donde muestra el último proceso registrado en la base de datos.
 ```bash
@@ -465,7 +515,7 @@ LIMIT 1
 ```
 El resultado permite identificar la actividad o etapa del proceso que se está ejecutando.
 
-### Panel 7: Consolidado
+#### Panel 7: Consolidado
 
 El tipo de visualización es una Tabla, donde se muestra la consolidación de los registros almacenados en InfluxDB.
 ```bash
@@ -507,7 +557,7 @@ Para configurar las alertas se utilizo Telegram, se establece el Bot de la sigui
   
 El Chat ID es el identificador único del chat individual o del grupo donde el bot publicará los mensajes.
 
-### grupo en Telegram
+### Grupo en Telegram
 
 * Crear un grupo en Telegram y agrega a los operadores-integrantes.
 * Agregar al bot recién creado al grupo como un miembro más.
