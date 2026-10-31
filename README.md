@@ -139,11 +139,31 @@ const char* mqtt_pass   = "****";           // Contraseña del usuario
 ```
 publica el tópico `esp32/values`.
 
-## 3. prueba de conectividad MQTT -ESP32
+## 3. Prueba de conectividad MQTT -ESP32
 
 Para verificar que el broker Mosquitto  en el servidor EC2 está recibiendo correctamente las métricas enviadas por el ESP32,se puede suscribir en tiempo real al tópico mediante la herramienta CLI de Mosquitto.
 
 ```bash
 mosquitto_sub -h localhost -p 1883 -u "esp32_user" -P "1234" -t "esp32/values" -v
 ```
+
+### Guardar CSV
+
+se puede guardar el csv de la siguiente manera:
+
+```bash
+mosquitto_sub -h localhost -p 1883 -u "esp32_user" -P "1234" -t "esp32/values" >nombre_base_de_datos.csv
+```
+
+## 4.Configuración de InfluxDB
+
+Para que la telemetría enviada por la ESP32 a través de MQTT pueda ser almacenada y consultada en tiempo real por Grafana, se utiliza InfluxDB como motor de base de datos especializado en series temporales.
+
+### Requisitos Previos
+
+Asegurarse de tener habilitado el puerto correspondiente en las reglas del Security Group de AWS y en el firewall del servidor en red publica. Para este caso se habilita el puerto `1883`.
+
+
+
+###### pega aqui ####
 
