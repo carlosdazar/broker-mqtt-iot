@@ -72,8 +72,11 @@ sudo systemctl status mosquitto
 
 Se debe descargar MQTT Explorer, al abrir la aplicación se debe configurar la conexión de la siguiente manera:
 
+![MQTT_Explorer_Conexion](docs/MQTT_Explorer_Conexion.png)
 
 una vez se realice la conexión se puede realizar un envio MQTT de la siguiente manera:
+
+![MQTT_Explorer_EnviarDatos](docs/MQTT_Explorer_EnviarDatos.png)
 
 ## 2. Configuración de ESP32
 
@@ -112,5 +115,35 @@ const char* mqtt_pass   = "****";           // Contraseña del usuario
 #define DHTTYPE       DHT11      // Modelo del sensor de temperatura/humedad
 
 #endif
+```
+### Lógica del Firmware y Publicación
+
+* Se inicia el sensor DHT11
+* Establece conexión a la red WiFi mediante las credenciales almacenadas.
+* Para asegurar la validez de los datos de trazabilidad, el ESP32 obtiene la fecha y hora precisa desde la red antes de publicar cualquier métrica.
+* Asigna los parámetros de conexión al cliente MQTT (PubSubClient)
+* Evalúa constantemente la conexión al broker. Si la sesión cae, activa la rutina `reconnect()` que reintenta la autenticación cada 5 segundos.
+* Utiliza `millis()` para muestrear y enviar datos cada 15 segundos `(interval = 15000)`, evitando el uso de llamadas `delay()` que detengan la ejecución.
+* Lee la temperatura (°C) y la humedad (%). Si la lectura falla o arroja un valor no válido `(isnan)`, aborta el envío para evitar registrar datos corruptos.
+* Envia los datos en Formato JSON de la siguiente manera:
+  
+```bash
+{
+  "id_sensor": "ESP32",
+  "temperatura": 22.4,
+  "humedad": 65.0,
+  "lote": "LOTE-2026-01",
+  "proceso": "SECADO_PASTOS",
+  "fecha_hora": "2026-10-30 21:45:00"
+}
+```
+publica el tópico `esp32/values`.
+
+## 3. prueba de conectividad MQTT -ESP32
+
+Para verificar que el broker Mosquitto  en el servidor EC2 está recibiendo correctamente las métricas enviadas por el ESP32,se puede suscribir en tiempo real al tópico mediante la herramienta CLI de Mosquitto.
+
+```bash
+mosquitto_sub -h localhost -p 1883 -u "esp32_user" -P "1234" -t "esp32/values" -v
 ```
 
