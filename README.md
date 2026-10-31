@@ -399,7 +399,7 @@ se hace  clic en Save & Test. Debe aparecer el mensaje de confirmación:
 ```bash
 Data source is working, 1 database found.
 ```
-## Visualización de datos en Grafana
+## 8. Visualización de datos en Grafana
 
 Este proyecto implementa un dashboard de monitoreo en tiempo real utilizando Grafana e InfluxDB (persistencia de los datos), con el objetivo de visualizar y supervisar las variables críticas (temperatura y humedad) en las etapas de secado y almacenamiento de bioproductos de hoja de coca. El dashboard permite realizar el seguimiento de las siguientes variables:
 * Temperatura: permite visualizar el comportamiento térmico registrado por el sensor.
@@ -412,6 +412,8 @@ La información se obtiene de la base de datos InfluxDB, específicamente de la 
 ### Estructura del dashboard
 
 El dashboard está compuesto por siete paneles, cada uno diseñado para representar información específica del sistema IoT.
+
+![Grafana_Dashboard.png](docs/Grafana_Dashboard.png)
 
 ### Panel 1: Temperatura
 
@@ -491,4 +493,59 @@ La implementación de este dashboard permite centralizar la información obtenid
 * Facilitar la identificación de posibles variaciones en las condiciones de operación.
 
 Este dashboard constituye una herramienta de visualización y monitoreo para un sistema IoT, integrando información almacenada en InfluxDB. Mediante siete paneles de visualización, es posible consultar indicadores actuales, analizar el comportamiento histórico de las variables ambientales e identificar información relacionada con los lotes y procesos registrados. La integración de MQTT, InfluxDB y Grafana permite establecer una arquitectura de adquisición, almacenamiento y visualización de datos que facilita la supervisión del sistema y proporciona información útil para el seguimiento de las condiciones de operación.
+
+## 9. Configuración de alertas
+
+Para configurar las alertas se utilizo Telegram, se establece el Bot de la siguiente manera
+
+* Abrir la aplicación de Telegram y buscar el usuario oficial `@BotFather.`
+* Iniciar la conversación haciendo clic en Start o enviando el comando `/start.`
+* Envíar el comando para crear un nuevo bot: `/newbot`
+* Asignar un nombre accesible para tu bot `(ejemplo: IoT Bioproductos Alert Bot).`
+* Asignar un nombre de usuario `(username)` único que finalice obligatoriamente en bot `(ejemplo: biococa_iot_alert_bot).`
+* Guardar el API Token: BotFather te responderá con un mensaje de confirmación que contiene tu token de acceso HTTP.
+  
+El Chat ID es el identificador único del chat individual o del grupo donde el bot publicará los mensajes.
+
+### grupo en Telegram
+
+* Crear un grupo en Telegram y agrega a los operadores-integrantes.
+* Agregar al bot recién creado al grupo como un miembro más.
+* Envíar un mensaje cualquiera dentro del grupo (ejemplo: Prueba de alerta).
+* Abrir la URL en el navegador:
+```bash
+https://api.telegram.org/bot<TU_BOT_TOKEN>/getUpdates
+```
+* Ubicar el identificador del grupo en la respuesta JSON, suelen empezar con un signo menos -
+
+### Configuración del Contact Point
+
+* En el menú lateral, ve a Alerting > Contact points.
+
+![Grafana_ConfiguracionAlerta.png](docs/Grafana_ConfiguracionAlerta.png)
+
+*  clic en el botón Test para enviar una notificación de prueba.
+*  Save contact point.
+
+### Alertas
+
+Ejemplo para configurar una alerta de Temperatura Alta:
+
+* Alerting > Alert rules > New alert rule.
+* Rule name: Temperatura Excesiva en Secado.
+* Set Query (InfluxDB):
+```bash
+SELECT last("temperatura") FROM "mqtt_consumer" WHERE $timeFilter
+```
+* Set Conditions (Threshold): condiciones de la alerta
+* Condition: IS ABOVE ( es mayor a )
+* Threshold: 30 (Se dispara si la temperatura supera los 30 °C).
+* Set Notifications
+* Asignar el contact point Telegram-Alerts.
+* Custom message:
+```bash
+ *🔥🔥ALERTA DE TEMPERATURA CRÍTICA🔥🔥*
+```
+* Save and exit.
+
 
