@@ -9,6 +9,7 @@ Control de variables críticas (temperatura y humedad) en las etapas de secado y
 * Andres Coral
 
 ## 1. Configuración de Mosquitto 
+
 Mosquitto es un intermediario de mensajes (message broker) de código abierto, ligero y de alto rendimiento que implementa el protocolo MQTT (Message Queuing Telemetry Transport).
 
 ### Requisitos Previos
@@ -33,9 +34,9 @@ sudo mosquitto_passwd -c /etc/mosquitto/passwd USUARIO
 ```
 Se crea un usuario `esp32_user` con contraseña.
 
-### Archivo de Configuración Principal 
+### Archivo de Configuración 
 
-se debe editar el archivo principal de configuración de Mosquitto para habilitar la interfaz de red y la autenticación por contraseña:
+se debe editar el archivo principal de configuración de Mosquitto  para habilitar la interfaz de red y la autenticación por contraseña:
 
 ```bash
 # Place your local configuration in /etc/mosquitto/conf.d/
@@ -58,7 +59,7 @@ include_dir /etc/mosquitto/conf.d
 ```
 ### Control del Servicio
 
-Se aplica los cambios reiniciando el servicio de Mosquito y configurar para que inicie automáticamente junto con el servidor:
+Se aplica los cambios reiniciando el servicio de Mosquito `/etc/mosquitto/mosquitto.conf` y configurar para que inicie automáticamente junto con el servidor:
 
 ```bash
 # Habilitar e iniciar el servicio
@@ -157,14 +158,79 @@ mosquitto_sub -h localhost -p 1883 -u "esp32_user" -P "1234" -t "esp32/values" >
 
 ## 4.Configuración de InfluxDB
 
-Para que la telemetría enviada por la ESP32 a través de MQTT pueda ser almacenada y consultada en tiempo real por Grafana, se utiliza InfluxDB como motor de base de datos especializado en series temporales.
+Para que la telemetría enviada por la ESP32 a través de MQTT pueda ser almacenada y consultada en tiempo real por Grafana, se utiliza InfluxDB como motor de base de datos especializado en series temporales. Se debe hacer la instalación en la red privada ya que se enfoca hacia la seguridad, la eficiencia y las buenas prácticas de arquitectura. 
 
 ### Requisitos Previos
 
-Asegurarse de tener habilitado el puerto correspondiente en las reglas del Security Group de AWS y en el firewall del servidor en red publica. Para este caso se habilita el puerto `1883`.
+Se debe realizar la conexión a la segunda instancia que esta en una red privada por medio de la primera instancia, esta permite recibir las conexiones SSH autorizadas desde el exterior (red pública) y reenviarlas de forma segura hacia la interfaz de red privada  de la segunda instancia, evitando exponer esta última directamente a Internet.
 
+Asegurarse de tener habilitado el puerto correspondiente en las reglas del Security Group de AWS y en el firewall del servidor en red publica. Para este caso se habilita el puerto `8086` permitido únicamente desde la IP Privada de la Instancia 1.
 
+```bash
+# Actualizar repositorios e instalar dependencias básicas
+apt-get update && apt-get install -y curl gnupg2
 
-###### pega aqui ####
+# Agregar la clave GPG oficial de InfluxData
+wget -q https://repos.influxdata.com/influxdata-archive_compat.key
+echo "39392622605745636582954638e33d4576d87a3e0c0073cd05943a7366367565 influxdata-archive_compat.key" | sha256sum -c && cat influxdata-archive_compat.key | gpg --dearmor | tee /etc/apt/trusted.gpg.d/influxdata-archive_compat.gpg > /dev/null
 
-Grafana
+#  Agregar el repositorio a las fuentes de APT
+echo 'deb [signed-by=/etc/apt/trusted.gpg.d/influxdata-archive_compat.gpg] https://repos.influxdata.com/debian stable main' | tee /etc/apt/sources.list.d/influxdata.list
+
+# Instalar únicamente el paquete InfluxDB (incluye motor y CLI 'influx')
+apt-get update && apt-get install -y influxdb
+```
+### Control del Servicio
+
+Habilitar InfluxDB para que se ejecute automáticamente cada vez que la instancia EC2 se reinicie:
+
+```bash
+# Iniciar el servicio
+sudo systemctl start influxdb
+
+# Habilitar el inicio automático
+sudo systemctl enable influxdb
+
+# Verificar que el servicio está activo (running)
+sudo systemctl status influxdb
+```
+### Crear la Base de Datos
+
+```bash
+influx
+-- Crear la base de datos para los registros del ESP32
+CREATE DATABASE nombre_base_datos
+-- Confirmar que la base de datos fue creada
+SHOW DATABASES
+```
+## 4.Configuración de telegraf
+
+Telegraf es un agente de software ligero y de código abierto (desarrollado por InfluxData) diseñado para la recolección, procesamiento y envío de datos y métricas,actúa como el "puente" o intermediario entre las fuentes que generan la información (sensores, brokers, servidores) y las bases de datos donde se almacena.
+
+Su función dentro de la arquitectura distribuida es actuar como puente en tiempo real: se suscribe al broker local Mosquitto MQTT, procesa el payload JSON emitido por los dispositivos ESP32, y persiste la telemetría formateada en la base de datos InfluxDB alojada en la Instancia Privada (Instancia 2).
+
+Se instala telegraf en la segunda instancia desde el repositorio, la información se encuentra e https://docs.influxdata.com/telegraf/v1/install/
+
+```bash
+curl --silent --location -O https://repos.influxdata.com/influxdata-archive.key
+gpg --show-keys --with-fingerprint --with-colons ./influxdata-archive.key 2>&1 \
+| grep -q '^fpr::*24C975CBA61A024EE1B631787C3D57159FC2F927:$' \
+&& cat influxdata-archive.key \
+| gpg --dearmor \
+| sudo tee /etc/apt/keyrings/influxdata-archive.gpg > /dev/null \
+&& echo 'deb [signed-by=/etc/apt/keyrings/influxdata-archive.gpg] https://repos.influxdata.com/debian stable main' \
+| sudo tee /etc/apt/sources.list.d/influxdata.list
+sudo apt-get update && sudo apt-get install telegraf
+```
+se instala el paquete de la siguiente manera:
+
+```bash
+apt-get update && apt-get install -y telegraf
+```
+
+### Archivo de Configuración 
+
+se debe editar el archivo de configuración de telegraf `/etc/telegraf/telegraf.conf` para la entrada de datos por Mosquitto y  la salida hacia influxd
+
+```bash
+```
