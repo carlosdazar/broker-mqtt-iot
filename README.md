@@ -67,6 +67,9 @@ log_dest file /var/log/mosquitto/mosquitto.log
 include_dir /etc/mosquitto/conf.d
 
 ```
+### Arquitectura
+![arquitectura](docs/arquitectura.png)
+
 ### Control del Servicio
 
 Se aplica los cambios reiniciando el servicio de Mosquito `/etc/mosquitto/mosquitto.conf` y configurar para que inicie automáticamente junto con el servidor:
