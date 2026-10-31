@@ -8,6 +8,16 @@ Control de variables críticas (temperatura y humedad) en las etapas de secado y
 * Carlos Daza
 * Andres Coral
 
+## Reglas de Seguridad en AWS (Security Groups)
+
+| Instancia | Puerto | Protocolo | Origen / Source | Propósito |
+| :--- | :--- | :--- | :--- | :--- |
+| **Instancia 1 (Pública)** | `22` | TCP | `Mi IP` | Acceso SSH Administrativo |
+| | `1883` | TCP | `0.0.0.0/0` | Ingesta de datos desde el ESP32 (MQTT) |
+| | `3000` | TCP | `0.0.0.0/0` | Acceso Web al Dashboard de Grafana |
+| **Instancia 2 (Privada)** | `22` | TCP | `IP_PRIVADA_INSTANCIA_1` | Acceso SSH mediante Bastion Host / Jump Server |
+| | `8086` | TCP | `IP_PRIVADA_INSTANCIA_1` | Escritura (Telegraf) y Consulta (Grafana) |
+
 ## 1. Configuración de Mosquitto 
 
 Mosquitto es un intermediario de mensajes (message broker) de código abierto, ligero y de alto rendimiento que implementa el protocolo MQTT (Message Queuing Telemetry Transport).
@@ -230,7 +240,7 @@ apt-get update && apt-get install -y telegraf
 
 ### Archivo de Configuración 
 
-se debe editar el archivo de configuración de telegraf `/etc/telegraf/telegraf.conf` para la entrada de datos por Mosquitto y  la salida hacia influxd
+se debe editar el archivo de configuración de telegraf `/etc/telegraf/telegraf.conf` para la entrada de datos por Mosquitto y  la salida hacia influxdb
 
 ```bash
 [[inputs.mqtt_consumer]]
@@ -280,4 +290,69 @@ Se debe observar algo como:
 
 ![Influx_Datos](docs/Influx_Datos.png)
 
+## 7. Grafana
+
+Grafana es una plataforma de código abierto para el análisis, la visualización y la monitorización de datos. Dentro de la arquitectura distribuida, Grafana se ejecuta en la Instancia 1 (Pública) y consulta de forma segura la base de datos InfluxDB situada en la Instancia 2 (Privada) para presentar la telemetría del ESP32 en tiempo real, se debe instalar en la primera instancia publica.
+
+### Requisitos Previos
+
+Asegurarse de tener habilitado el puerto correspondiente en las reglas del Security Group de AWS y en el firewall del servidor en red publica. Para este caso se habilita el puerto `3000`.
+
+```bash
+# Instalar dependencias necesarias
+apt-get update && apt-get install -y apt-transport-https software-properties-common wget
+
+# Agregar la clave GPG oficial de Grafana
+mkdir -p /etc/apt/keyrings/
+wget -q -O - https://apt.grafana.com/gpg.key | gpg --dearmor | tee /etc/apt/keyrings/grafana.gpg > /dev/null
+
+# Agregar el repositorio estable a las fuentes de APT
+echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" | tee /etc/apt/sources.list.d/grafana.list
+
+# Actualizar repositorios e instalar Grafana OSS
+apt-get update && apt-get install -y grafana
+```
+
+### Control del Servicio
+
+ habilitar grafana para que se ejecute automáticamente cada vez que la instancia EC2 se reinicie:
+ 
+```bash
+# Iniciar el servicio de Grafana
+systemctl start grafana-server
+
+# Habilitar el arranque automático con el sistema
+systemctl enable grafana-server
+
+# Verificar que se encuentre en ejecución
+systemctl status grafana-server
+```
+### Acceder a Grafana
+
+Para acceder al panel web de Grafana desde el  navegador se usa : `http://<IP_PUBLICA_INSTANCIA_1>:3000`
+
+* Usuario por defecto: admin
+* contraseña por defecto: admin (se solicitará cambiarla en el primer ingreso).
+
+### Configuración Grafana
+
+Se debe unir Grafana con influxdb, se realiza el siguiente proceso:
+
+* En el menú lateral izquierdo, Connections > Data Sources.
+* Add data source y selecciona InfluxDB.
+* Configuración general:
+
+![Grafana_Datasources](docs/Grafana_Datasources_1.png)
+
+La url es la `Ip_privada_local:8086`
+
+![Grafana_Datasources_2](docs/Grafana_Datasources_2.png)
+
+el dataset es el mismo que se asigno anteriormente donde se guardan los datos
+
+se hace  clic en Save & Test. Debe aparecer el mensaje de confirmación:
+
+```bash
+Data source is working, 1 database found.
+```
 
