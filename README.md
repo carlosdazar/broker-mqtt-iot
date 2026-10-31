@@ -199,7 +199,7 @@ publica el tópico `esp32/values`.
 Para verificar que el broker Mosquitto  en el servidor EC2 está recibiendo correctamente las métricas enviadas por el ESP32,se puede suscribir en tiempo real al tópico mediante la herramienta CLI de Mosquitto.
 
 ```bash
-mosquitto_sub -h localhost -p 1883 -u "esp32_user" -P "1234" -t "esp32/values" -v
+mosquitto_sub -h localhost -p 1883 -u "esp32_user" -P "****" -t "esp32/values" -v
 ```
 
 ### Guardar CSV
@@ -207,7 +207,7 @@ mosquitto_sub -h localhost -p 1883 -u "esp32_user" -P "1234" -t "esp32/values" -
 se puede guardar el csv de la siguiente manera:
 
 ```bash
-mosquitto_sub -h localhost -p 1883 -u "esp32_user" -P "1234" -t "esp32/values" >nombre_base_de_datos.csv
+mosquitto_sub -h localhost -p 1883 -u "esp32_user" -P "****" -t "esp32/values" >nombre_base_de_datos.csv
 ```
 
 ## 4.Configuración de InfluxDB
